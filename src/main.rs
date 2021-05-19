@@ -13,15 +13,58 @@ struct CLI {
     size: usize,
 }
 
-struct MyFile {
+pub struct MyFile {
     name: String,
     dir_in: String,
     size_bytes: u64,
 }
 
+impl MyFile {
+    pub fn new(name: String, path: String) -> Self {
+        Self {
+            name,
+            dir_in: path,
+            size_bytes: 0,
+        }
+    }
+}
+
 fn main() {
    let args = CLI::from_args(); 
-   for name in &args.dirs {
-       println!("{}", name);
+   let files = files::read_files(&args.dirs);
+   for file in files {
+       println!("{:?}", file.name);
    }
 }
+
+mod files {
+    use super::MyFile;
+    use std::path::Path;
+    use std::fs::{self, DirEntry};
+    pub fn read_files(dirs: &Vec<String>) -> Vec<MyFile>{
+        let mut result: Vec<MyFile> = Vec::new();
+        let mut dir_entries: Vec<DirEntry> = Vec::new();
+        for dir in dirs {
+            let _ = scan_dir(Path::new(dir), & mut dir_entries);
+        }
+        for file in dir_entries {
+            result.push(MyFile::new(file.file_name().into_string().unwrap(), file.path().into_os_string().into_string().unwrap()));
+        }
+        result
+    }
+
+    fn scan_dir(dir: &Path, files: & mut Vec<DirEntry>) {
+        if dir.is_dir() {
+            for entry in fs::read_dir(dir).unwrap() {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                if path.is_dir() {
+                    scan_dir(&path, files);
+                } else {
+                   files.push(entry);
+                }
+            }
+        } 
+
+    }
+} 
